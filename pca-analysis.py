@@ -154,7 +154,13 @@ def read_dat_file(pathname):
 #reshape since it is only one feature at the moment
 def linear_analysis(X, y):
     # TODO TRY AND REMOVE THIS LINE
-    X = np.array(X)
+    data = np.array(X)
+    # Scale each feature column to have zero mean and 1 STD
+    scaler = StandardScaler()
+    X = scaler.fit_transform(data)
+    print("####LINEAR ANALYSIS#####")
+    print(X.mean(axis = 0))
+    print(X.std(axis = 0))
 #    y = np.array(y)
     # ONLY NEED THIS IF THERE IS ONE FEATURE
     #X = X.reshape(-1,1)
@@ -234,7 +240,7 @@ def main():
     #print(raw_data_path)
     options = {}
     options["bgr"] = True
-    options["texture"] = False
+    options["texture"] = True
     options["stokes"] = True
 
     P1_img_name = 'H.png'
@@ -256,11 +262,18 @@ def main():
         P1_img = cv2.imread(os.path.join(pathname, P1_img_name), COLOR)
         P2_img = cv2.imread(os.path.join(pathname, P2_img_name), COLOR)
 
+        Xs = []
         Xt = []
         # Texture Analysis
-        if options["texture"] == True:
+        if options["texture"] == True and options["bgr"] == True:
+            T_bgr = cv2.split(P1_img)
+            #TODO: add support for both images to be analyzed
+            T = [texture_analysis(P1_img) for P1_img in T_bgr]
             #blue = cv2.split(P1_img)[0]
             #t_bgr = zip(cv2.split(P1_img), cv2.split(P2_img))
+            for t in T:
+                Xt.extend(t)
+        elif options["texture"] == True:
             Xt.extend(texture_analysis(P1_img))
             Xt.extend(texture_analysis(P2_img))
             #Xt.append(texture_analysis(P2_img))
@@ -269,15 +282,15 @@ def main():
         if options["stokes"] == True and options["bgr"] == True:
             P_bgr = zip(cv2.split(P1_img), cv2.split(P2_img))
             S = [stokes_analysis(P1, P2) for P1,P2 in P_bgr]
+            for s in S:
+                Xs.extend([s["stats"]["std"],s["stats"]["mean"]])
         elif options["stokes"] == True:
-            S = [stokes_analysis(P1_img, P2_img)]
+            S = stokes_analysis(P1_img, P2_img)
+            Xs.extend([S["stats"]["std"],S["stats"]["mean"]])
         #print(S)
         print("######")
         #print(data["stats"])
         #print("RWC: {}".format(data["rwc"]))
-        Xs = []
-        for s in S:
-            Xs.extend([s["stats"]["std"],s["stats"]["mean"]])
         #X.append(Xs)
         #X.append(Xt)
         #X.append([S[0]["stats"]["std"], S[0]["stats"]["mean"], S[1]["stats"]["std"], S[1]["stats"]["mean"]])
