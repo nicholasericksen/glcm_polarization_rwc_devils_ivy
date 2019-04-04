@@ -177,7 +177,8 @@ def linear_analysis(X, y):
     #TODO: Make a pipeline overall for imaging process
 
         # X_axis = np.linspace(0,100,1).T
-    pca = PCA(n_components=2).fit(X_train)
+    #pca = PCA(n_components=2).fit(X_train)
+    pca = PCA(n_components=1).fit(X_train)
     #X_train_pca = pca.transform(X_train)
     #X_test_pca = pca.transform(X_test)
 
@@ -204,15 +205,15 @@ def linear_analysis(X, y):
     plt.title('Linear Regression For Relative Water Content')
     plt.xlabel('First Principal Component')
     plt.ylabel('Relative Water Content')
-    plt.scatter(X[:,0], y)
-    plt.plot(X[:,0].reshape(-1, 1), y_pred)
+    plt.scatter(X_pca[:,0], y)
+    plt.plot(X_pca[:,0].reshape(-1, 1), y_pred)
 
     plt.show()
 ###################
 # Texture Analysis #
 ####################
 def texture_analysis(img):
-    img_samples = image.extract_patches_2d(img, (75, 75), 5, 1)
+    img_samples = image.extract_patches_2d(img, (75, 75), 20, 1)
     texture = []
     for sample in img_samples:
          try:
