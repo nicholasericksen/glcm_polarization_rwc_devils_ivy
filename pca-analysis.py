@@ -9,8 +9,13 @@ import matplotlib.pyplot as plt
 # Regression imports #
 from sklearn import linear_model
 from sklearn.metrics import r2_score, explained_variance_score, mean_squared_error
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, LeaveOneOut, learning_curve
 ######################
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline
+def PolynomialRegression(degree=2, **kwargs):
+        return make_pipeline(PolynomialFeatures(degree), LinearRegression(**kwargs))
+
 
 ########################
 ###### PCA IMports #####
@@ -19,6 +24,7 @@ from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import classification_report
+from sklearn.preprocessing import normalize
 #######################
 ### Texture imports ###
 from sklearn import svm
@@ -156,15 +162,30 @@ def linear_analysis(X, y):
     # TODO TRY AND REMOVE THIS LINE
     data = np.array(X)
     # Scale each feature column to have zero mean and 1 STD
+    
+    
+    
+    
     scaler = StandardScaler()
     X = scaler.fit_transform(data)
-    print("####LINEAR ANALYSIS#####")
-    print(X.mean(axis = 0))
-    print(X.std(axis = 0))
+    #X = normalize(X)
+
+
+
+    #print("####LINEAR ANALYSIS#####")
+    #print(X.mean(axis = 0))
+    #print(X.std(axis = 0))
 #    y = np.array(y)
     # ONLY NEED THIS IF THERE IS ONE FEATURE
+    #pca = PCA(n_components=2).fit(X_train)
+    pca = PCA(n_components=2)
+    #X_train_pca = pca.transform(X_train)
+    #X_test_pca = pca.transform(X_test)
+
+    X_pca = pca.fit_transform(X)
     #X = X.reshape(-1,1)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=4)
+    print("PCA", pca.explained_variance_ratio_)
+    X_train, X_test, y_train, y_test = train_test_split(X_pca, y, test_size=0.2, random_state=2)
     #steps = [
     #        ('scale', StandardScaler()),
     #        ('pca', PCA()),
@@ -175,40 +196,102 @@ def linear_analysis(X, y):
     #pipe.fit(X_train, y_train)
     #TODO: Add StandardScaler
     #TODO: Make a pipeline overall for imaging process
-
+############################################
         # X_axis = np.linspace(0,100,1).T
     #pca = PCA(n_components=2).fit(X_train)
-    pca = PCA(n_components=1).fit(X_train)
-    #X_train_pca = pca.transform(X_train)
-    #X_test_pca = pca.transform(X_test)
-
-    X_pca = pca.fit_transform(X)
+#    print(X_pca.explained_variance_ratio_)
     #print(X_pca)
     #X_pca = X_pca.ravel()
     # This is only needed if there is one sample
     # TODO: Add cross fold validation
     #X_pca = X_pca.reshape(-1,1)
+    loo = LeaveOneOut()
     regr = linear_model.LinearRegression()
     #regr.fit(X_train_pca, y_train)
-    regr.fit(X, y)
-    y_pred = regr.predict(X)
+    folds = len(X)
+    scores = cross_val_score(regr, X, y, cv=5)
+    
+    print(scores)
+    print("Accurcy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    #regr.fit(X_train, y_train)
+    #y_pred = regr.predict(X_test)
+    regr.fit(X_pca, y)
+    y_pred = regr.predict(X_pca)
     #print(y_pred)
     #print(y)
     # Calculate and print classifier metrics
 #    print(classification_report(y_test, y_pred, target_names=target_names))
-    print("r2: ", r2_score(y, y_pred, multioutput='variance_weighted'))
+    R2 = r2_score(y, y_pred, multioutput='variance_weighted' )
+    print("r2: ", R2)
+    n = len(y)
+    print("SHAPE", X.shape)
+    p = X_pca.shape[1]
+    print(n)
+    print(p)
+    r2_adjusted = 1-(1-R2)*(n-1)/(n-p-1)
     #print("explained_variance_score: ", explained_variance_score(y, y_pred))
+    print("r2 adjusted", r2_adjusted)
     print("root mean squared: ", mean_squared_error(y, y_pred))
-    #scores = cross_val_score(regr, X, y, cv=2)
-    #print("Accurcy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
 
     plt.title('Linear Regression For Relative Water Content')
     plt.xlabel('First Principal Component')
     plt.ylabel('Relative Water Content')
     plt.scatter(X_pca[:,0], y)
-    plt.plot(X_pca[:,0].reshape(-1, 1), y_pred)
+    plt.scatter(X_pca[:,0].reshape(-1, 1), y_pred, marker='^')
 
     plt.show()
+
+
+######################################################
+####OPTION 1 for validation curve#######################
+#######################################################
+#    from sklearn.model_selection import validation_curve
+#    degree = np.arange(0, 9)
+#    train_score, val_score = validation_curve(regr, X_pca, y, 'polynomialfeatures__degree', degree, cv=5)
+#    
+#    plt.plot(degree, np.median(train_score, 1), color='blue', label='training score')
+#    plt.plot(degree, np.median(val_score, 1), color='red', label='validation score')
+#    plt.legend(loc='best')
+#    plt.ylim(-0.1, 1.1)
+#    plt.xlabel('degree')
+#    plt.ylabel('score');
+#    plt.show()
+###########################################
+######## OPTION 2 for learning curve ######
+############################################
+#    plt.figure()
+#    plt.title("title")
+#    plt.ylim(-10,2)
+#    plt.xlabel("Training examples")
+#    plt.ylabel("Score")
+#    train_sizes, train_scores, test_scores = learning_curve(regr, X_pca, y, cv=5,train_sizes=np.linspace(.1, 1.0, 5))
+#    train_scores_mean = np.mean(train_scores, axis=1)
+#    train_scores_std = np.std(train_scores, axis=1)
+#    test_scores_mean = np.mean(test_scores, axis=1)
+#    test_scores_std = np.std(test_scores, axis=1)
+#    plt.grid()
+#
+#    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+#    train_scores_mean + train_scores_std, alpha=0.1,
+#    color="r")
+#    plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+#    test_scores_mean + test_scores_std, alpha=0.1, color="g")
+#    plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+#    label="Training score")
+#    plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
+#    label="Cross-validation score")
+#    plt.legend(loc="best")
+#    plt.show()
+
+    ############ 3D plot ################
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111, projection='3d')
+    #ax.scatter(df2['Price'],df2['AdSpends'],df2['Sales'],c='blue', marker='o', alpha=0.5)
+    #ax.plot_surface(x_surf,y_surf,fittedY.reshape(x_surf.shape), color='None', alpha=0.01)
+    #ax.set_xlabel('Price')
+    #ax.set_ylabel('AdSpends')
+    #ax.set_zlabel('Sales')
+    #plt.show()
 ###################
 # Texture Analysis #
 ####################
@@ -231,7 +314,8 @@ def texture_analysis(img):
     data = np.array(texture)
     diss = np.mean(data[:,0])
     contrast = np.mean(data[:,1])
-    return [diss, contrast]
+    energy = np.mean(data[:,3])
+    return [diss, energy]
 ####################
 def main():
     raw_data_path = os.path.join(os.getcwd(), "raw_data")
@@ -249,6 +333,11 @@ def main():
 #    imgs = ['H.png', 'V.png']
     X = []
     y = []
+    headers = ["RWC", "Sb_std", "Sb_mean", "Sg_std", "Sg_mean", "Sr_std", "Sr_mean", "b_diss", "b_energy", "g_diss", "g_energy", "r_diss", "r_energy"]
+#    headers = ["Sb_std", "Sb_mean", "Sg_std", "Sg_mean", "Sr_std", "Sr_mean"] 
+    with open ('Test.csv', 'a') as f:
+        np.savetxt(f, [headers], delimiter=',', fmt="%s")
+    f.close()
     for directory in datasets:
         pathname = os.path.join(raw_data_path, directory)
 
@@ -265,6 +354,7 @@ def main():
 
         Xs = []
         Xt = []
+        headers = []
         # Texture Analysis
         if options["texture"] == True and options["bgr"] == True:
             T_bgr = cv2.split(P1_img)
@@ -289,7 +379,8 @@ def main():
             S = stokes_analysis(P1_img, P2_img)
             Xs.extend([S["stats"]["std"],S["stats"]["mean"]])
         #print(S)
-        print("######")
+        print("#")
+        # print("#", end='')
         #print(data["stats"])
         #print("RWC: {}".format(data["rwc"]))
         #X.append(Xs)
@@ -297,10 +388,15 @@ def main():
         #X.append([S[0]["stats"]["std"], S[0]["stats"]["mean"], S[1]["stats"]["std"], S[1]["stats"]["mean"]])
         #X_tmp = []
         # Extend feature arrays
-        Xs.extend(Xt)
-        X.append(Xs)
+        #Xs.extend(Xt)
+        X.append(Xs + Xt)
         #X.append([data["stats"]["mean"]])
         y.append(rwc)
+        list_features = [rwc] + Xs + Xt
+        print(list_features)
+        with open ('Test.csv', 'a') as f:
+            np.savetxt(f, [list_features], delimiter=',', fmt="%g")
+        f.close()
     # Linear Regression
     #print("X: {}".format(X))
     #print("y: {}".format(y))
