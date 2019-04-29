@@ -333,7 +333,7 @@ def main():
 #    imgs = ['H.png', 'V.png']
     X = []
     y = []
-    headers = ["RWC", "Sb_std", "Sb_mean", "Sg_std", "Sg_mean", "Sr_std", "Sr_mean", "b_diss", "b_energy", "g_diss", "g_energy", "r_diss", "r_energy"]
+    headers = ["RWC", "P1_std_b", "P1_mean_b", "P1_std_g", "P1_mean_g", "P1_std_r", "P1_mean_r", "diss_b", "energy_b", "diss_g", "energy_g", "diss_r", "energy_r"]
 #    headers = ["Sb_std", "Sb_mean", "Sg_std", "Sg_mean", "Sr_std", "Sr_mean"] 
     with open ('Test.csv', 'a') as f:
         np.savetxt(f, [headers], delimiter=',', fmt="%s")
